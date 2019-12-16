@@ -1,0 +1,31 @@
+FROM python:3.7-alpine3.10
+
+ENV UNIT_VERSION 1.13.0
+
+RUN apk update \
+    && apk add --no-cache --virtual .build-deps make gcc libc-dev \
+    && cd /tmp && wget -qO - "https://unit.nginx.org/download/unit-$UNIT_VERSION.tar.gz" | tar xvz \
+    && cd unit-$UNIT_VERSION \
+    && ./configure --prefix=/usr \
+                 --modules=lib --control='unix:/var/run/control.unit.sock' \
+                 --log=/dev/stdout \
+                 --pid=/var/run/unitd.pid \
+    && ./configure python --config=/usr/local/bin/python-config \
+    && make install \
+    && rm -rf /tmp/unit-$UNIT_VERSION \
+    && apk del .build-deps \
+    && apk add curl
+
+WORKDIR /usr/src/app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+
+STOPSIGNAL SIGTERM
+
+RUN unitd && curl -X PUT --data-binary @kudos-app.json --unix-socket /var/run/control.unit.sock http://localhost/config
+CMD ["unitd", "--no-daemon", "--control", "unix:/var/run/control.unit.sock"]
+
+# resources
+# https://github.com/mthota15/unit-flask
+# https://github.com/mthota15/unit-python
