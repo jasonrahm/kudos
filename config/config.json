@@ -7,7 +7,7 @@
     "applications": {
         "webapp": {
             "type": "python 3",
-            "path": "/www/",
+            "path": "/usr/src/app/webapp/",
             "module": "app"
         }
     }
